@@ -22,7 +22,7 @@ import { MdClass } from "react-icons/md";
 import { MdAssignment } from "react-icons/md";
 import { FaUsers } from "react-icons/fa";
 
-import teacher from "../data/user_inforamtion.js";
+import teacher from "../data/user_inforamtion";
 import Checked from "../assets/checked.png"
 import { useLocation, useNavigate } from "react-router-dom";
 

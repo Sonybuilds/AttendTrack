@@ -1,16 +1,11 @@
-import Chip from '@mui/material/Chip';
-import Login_Image from "../assets/Login_Image.jpg";
-import Checked from "../assets/checked.png";
-
-import TextField from '@mui/material/TextField';
-import InputAdornment from '@mui/material/InputAdornment';
-import Button from '@mui/material/Button';
-import Alert from '@mui/material/Alert';
-
+import { Alert, CircularProgress, Snackbar ,Chip,Button,InputAdornment,TextField } from '@mui/material';
+import { useEffect, useState } from 'react';
 import { FaIdCardClip } from "react-icons/fa6";
 import { MdLock } from "react-icons/md";
-import { Link } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import Login_Image from "../assets/Login_Image.jpg";
+import Checked from "../assets/checked.png";
+import api from '../api/axios';
 
 export default function Login() {
   const feature_Chip_information = [
@@ -23,12 +18,12 @@ export default function Login() {
   useEffect(() => {
     document.title = "AttendTrack | Login";
   }, []);
-
+  const navigate = useNavigate();
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
   const [alert, setAlert] = useState(false);
-
-  const LoginHandle = (e) => {
+  const [message, setMessage] = useState('')
+  const LoginHandle = async (e) => {
     e.preventDefault();
 
     if (id.trim() === "" || password.trim() === "") {
@@ -38,12 +33,44 @@ export default function Login() {
       }, 1500);
       return;
     }
-    console.log("Teacher Id:", id);
-    console.log("Password  :", password);
+    try {
+      setMessage("Please wait...")
+      const response = await api.post("/login", { id, password });
+      if (response) setMessage(false)
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      setMessage(response.data.message);
+      setTimeout(() => {
+        navigate('/attendtrack/dashboard')
+      }, 1500);
+
+    } catch (error) {
+      if (error) setMessage(false);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      if (error.message === "Network Error") {
+        setAlert("Unable to connect to the server.")
+      }
+      else {
+        setAlert(error.response.data.message)
+      }
+      setTimeout(() => {
+        setAlert(false);
+      }, 1500);
+
+    }
   };
 
   return (
     <>
+      <Snackbar open={message} autoHideDuration={6000} className='!absolute !bg-black/30 w-full h-full !bottom-0 !left-0'>
+        <Alert
+          icon={<CircularProgress color="inherit" size={'20px'} />}
+          variant="filled"
+          className='absolute  bottom-8 left-[50%] -translate-x-1/2 !min-h-0 !px-2 '
+        >
+          <span>{message}</span>
+        </Alert>
+      </Snackbar>
+
       <div className="grid md:grid-cols-2 h-screen">
         <div className="hidden md:block overflow-hidden relative">
           <img src={Login_Image} alt="" className="h-full object-cover brightness-75 w-full" />
