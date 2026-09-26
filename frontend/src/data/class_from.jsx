@@ -25,4 +25,29 @@ const classes_name = [
   "B.Com 3rd Year",
 ];
 
-export { departments, classes_name };
+const weekDays = [
+  {
+    value: 'Monday'
+  },
+  {
+    value: 'Tuesday'
+  },
+  {
+    value: 'Wednesday'
+  },
+  {
+    value: 'Thursday'
+  },
+  {
+    value: 'Friday'
+  },
+  {
+    value: 'Saturday'
+  },
+  {
+    value: 'Sunday'
+  }
+];
+
+
+export { departments, classes_name ,weekDays };

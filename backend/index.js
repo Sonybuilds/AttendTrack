@@ -21,7 +21,7 @@ app.use('/',userRoutes)
 const PORT = process.env.PORT || 5000;
 
 mongoose
-  .connect(process.env.SERVER_MONGODB)
+  .connect(process.env.LOCAL_MONGODB)
   .then(() => {
     console.log("MongoDB connected",);
 
