@@ -9,8 +9,9 @@ import dayjs from 'dayjs';
 import { Autocomplete, Button, Dialog, TextField, Switch, Select, MenuItem } from '@mui/material';
 import { useState } from 'react';
 import api from '../api/axios'
+import { Alert, CircularProgress, Snackbar } from '@mui/material';
 
-export default function ClassForm({ open, onClose }) {
+export default function ClassForm({ open, onClose, onSuccess }) {
   const [department, setDepartment] = useState('');
   const [subject, SetSubject] = useState('');
   const [subjectCode, SetSubjectCode] = useState('');
@@ -23,6 +24,8 @@ export default function ClassForm({ open, onClose }) {
   const [selectedDays, setSelectedDays] = useState([]);
   const [active, setActive] = useState(true)
   const [dayAndWeek, SetDayAndWeek] = useState(true)
+  const [message, setMessage] = useState('')
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -43,7 +46,11 @@ export default function ClassForm({ open, onClose }) {
     };
     try{
        const response = await api.post('/teacher/addclass',classData);
-       console.log(response)
+       setMessage(response.data.message)
+       await onSuccess();
+       await new Promise((resolve) => setTimeout(resolve, 500));
+       setMessage(false)
+       onClose();
     }catch(error)
     {
       console.log(error )
@@ -52,6 +59,15 @@ export default function ClassForm({ open, onClose }) {
 
   return (
     <>
+    <Snackbar open={message} autoHideDuration={6000} className='!absolute !bg-black/30 w-full h-full !bottom-0 !left-0'>
+            <Alert
+              icon={<CircularProgress color="inherit" size={'20px'} />}
+              variant="filled"
+              className='absolute  bottom-8 left-[50%] -translate-x-1/2 !min-h-0 !px-2 '
+            >
+              <span>{message}</span>
+            </Alert>
+          </Snackbar>
       <LocalizationProvider dateAdapter={AdapterDayjs}>
         {/*  ADD CLASS DIALOG*/}
         <Dialog fullScreen open={open} >

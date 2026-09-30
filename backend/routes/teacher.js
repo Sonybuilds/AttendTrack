@@ -61,7 +61,7 @@ routes.post("/teacher/addclass", async (req, res) => {
 
     const existingClass = await Class.findOne({ subjectCode: classData.subjectCode });
     console.log(existingClass);
-    
+
     if (existingClass) {
       return res.status(409).json({
         success: false,
@@ -90,6 +90,47 @@ routes.post("/teacher/addclass", async (req, res) => {
     });
   }
 });
+
+routes.get("/teacher/classes",async (req,res)=>{
+  try{
+    const classes = await Class.find();
+    res.status(200).json({classes})
+
+  }catch(error)
+  {
+    console.log(error)
+  }
+})
+
+routes.delete('/teacher/classes/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(id);
+    const deletedClass = await Class.findByIdAndDelete(id);
+
+    if (!deletedClass) {
+      return res.status(404).json({
+        success: false,
+        message: 'Class not found',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Class deleted successfully',
+      data: deletedClass,
+    });
+  } catch (error) {
+    console.error('Delete class error:', error);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to delete class',
+      error: error.message,
+    });
+  }
+});
+
 
 
 
