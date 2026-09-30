@@ -38,15 +38,15 @@ export default function Dashboard() {
 			element: <Class />
 		},
 		{
+			icon: <FaUsers />,
+			name: 'Student',
+			element: <Student />
+		},
+		{
 			icon: <MdAssignment />,
 			name: 'Report',
 			element: <Report />
 		},
-		{
-			icon: <FaUsers />,
-			name: 'Student',
-			element: <Student />
-		}
 	]
 
 	const [activeTab, setActiveTab] = useState(() => {
@@ -81,7 +81,7 @@ export default function Dashboard() {
 
 				<div className="flex overflow-hidden ">
 					<div className="h-dvh border-r border-gray-300">
-						<Tabs value={activeTab} onChange={handleTab} orientation="vertical" className="mt-2 !p-0 !w-min-0 !w-15 " sx={{
+						<Tabs value={activeTab} onChange={handleTab} orientation="vertical" className="mt-2 !p-0 !w-min-0 !w-12 " sx={{
 							minWidth: 0,
 							padding: 0,
 							'& .MuiTabs-indicator': {
@@ -91,7 +91,7 @@ export default function Dashboard() {
 							},
 						}}>
 							{section.map((data, index) => (
-								<Tab key={index} label={data.icon} className="!text-2xl !mx-auto !my-3 !p-2 !w-9 !h-9 !min-h-0 !min-w-0" sx={{
+								<Tab key={index} label={data.icon} className="!text-2xl !mx-auto !my-3 !p-1.5 !w-8 !h-8 !min-h-0 !min-w-0" sx={{
 									minWidth: 'unset',
 									borderRadius: '30%',
 									color: '#64748b', // Slate-500
