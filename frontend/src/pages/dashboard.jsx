@@ -5,15 +5,18 @@ import Class from "../dashborad_section/class";
 import Overview from "../dashborad_section/overview";
 import Report from "../dashborad_section/report";
 import Student from "../dashborad_section/student";
+import Attendance from "../dashborad_section/attendance";
 
 import { TbLayoutDashboardFilled } from "react-icons/tb";
 import { FaUsers } from "react-icons/fa";
 import { MdAssignment, MdClass } from "react-icons/md";
+import { FiCheckSquare } from "react-icons/fi";
 import { RiConnectorFill, RiSendPlaneFill } from "react-icons/ri";
+import { FiLogOut } from "react-icons/fi";
 
 import { useLocation, useNavigate } from "react-router-dom";
 import Checked from "../assets/checked.png";
-import teacher from "../data/user_inforamtion";
+import api from "../api/axios";
 
 
 export default function Dashboard() {
@@ -21,10 +24,19 @@ export default function Dashboard() {
 	const location = useLocation().pathname.split('/').at(-1);
 	const [open, setOpen] = useState(false);
 	const [address, setAddress] = useState('')
+ const [teacherName, setTeacherName] = useState('Teacher')
 
 	useEffect(() => {
 		document.title = "AttendTrack | Dashboard"
 	})
+
+	useEffect(() => {
+		let active = true;
+		api.get("/teacher/session").then((response) => {
+			if (active) setTeacherName(response.data.teacher?.name || "Teacher");
+		}).catch(() => {});
+		return () => { active = false; };
+	}, [])
 
 	const section = [
 		{
@@ -41,6 +53,11 @@ export default function Dashboard() {
 			icon: <FaUsers />,
 			name: 'Student',
 			element: <Student />
+		},
+		{
+			icon: <FiCheckSquare />,
+			name: 'Attendance',
+			element: <Attendance />
 		},
 		{
 			icon: <MdAssignment />,
@@ -65,6 +82,16 @@ export default function Dashboard() {
 		)
 	}
 
+	const handleLogout = async () => {
+		try {
+			await api.post("/logout");
+		} catch {
+			// Continue to the login screen even if the server cannot be reached.
+		} finally {
+			navigate("/login", { replace: true });
+		}
+	}
+
 	return (
 		<>
 			<div className="h-screen overflow-hidden flex flex-col ">
@@ -75,7 +102,8 @@ export default function Dashboard() {
 					</div>
 					<div className="!space-x-3">
 						<Button onClick={() => { setOpen(true) }} variant="contained" color="success" className="!min-w-0 !p-0 !w-8 !h-8 !rounded-full"><RiConnectorFill className="text-lg" /></Button>
-						<Button onClick={() => { navigate('/attendtrack/dashboard/profile') }} variant="contained" className="!min-w-0 !p-0 !w-8 !h-8 !rounded-full">{teacher.name.split(' ').map((word) => word[0]).join('')}</Button>
+						<Button onClick={() => { navigate('/attendtrack/dashboard/profile') }} variant="contained" className="!min-w-0 !p-0 !w-8 !h-8 !rounded-full">{teacherName.split(' ').map((word) => word[0]).join('')}</Button>
+						<Button onClick={handleLogout} variant="outlined" color="inherit" startIcon={<FiLogOut />} className="!ml-2 !normal-case">Logout</Button>
 					</div>
 				</div>
 

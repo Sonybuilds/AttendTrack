@@ -1,838 +1,402 @@
-import { useState } from "react";
-import { Button, MenuItem, TextField } from "@mui/material";
+import { useEffect, useMemo, useState } from "react";
 import {
-  FiBarChart2,
-  FiDownload,
-  FiPrinter,
-  FiRefreshCcw,
-} from "react-icons/fi";
+  Alert,
+  Autocomplete,
+  Button,
+  Chip,
+  CircularProgress,
+  TextField,
+} from "@mui/material";
+import { FiBarChart2, FiDownload, FiPrinter, FiRefreshCcw } from "react-icons/fi";
+import api from "../api/axios";
+
+const pageLimit = 100;
+const currentMonth = () => {
+  const values = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(new Date());
+  const year = values.find((part) => part.type === "year")?.value;
+  const month = values.find((part) => part.type === "month")?.value;
+  return `${year}-${month}`;
+};
+
+const escapeCsv = (value) => {
+  const text = Array.isArray(value) ? value.join("; ") : String(value ?? "");
+  return `"${text.replaceAll('"', '""')}"`;
+};
+
+const classLabel = (classData) => classData
+  ? `${classData.subject} (${classData.subjectCode}) · ${classData.className} · ${classData.department}`
+  : "";
+
+const recordId = (record) => record && typeof record === "object" ? record._id ?? null : null;
+const sameRecord = (option, value) => {
+  const optionId = recordId(option);
+  const valueId = recordId(value);
+  return optionId !== null && valueId !== null && String(optionId) === String(valueId);
+};
 
 export default function Reports() {
   const [reportType, setReportType] = useState("student");
-
-  const [filters, setFilters] = useState({
-    academicYear: "",
-    department: "",
-    className: "",
-    subject: "",
-    fromDate: "",
-    toDate: "",
-  });
-
+  const [month, setMonth] = useState(currentMonth);
+  const [classes, setClasses] = useState([]);
+  const [selectedClass, setSelectedClass] = useState(null);
+  const [availableStudents, setAvailableStudents] = useState([]);
+  const [selectedStudents, setSelectedStudents] = useState([]);
+  const [reportStudents, setReportStudents] = useState([]);
+  const [attendanceRecords, setAttendanceRecords] = useState([]);
+  const [reportSummary, setReportSummary] = useState({ present: 0, absent: 0, marked: 0, rate: 0 });
+  const [loadingClasses, setLoadingClasses] = useState(true);
+  const [loadingStudents, setLoadingStudents] = useState(false);
   const [reportCreated, setReportCreated] = useState(false);
   const [error, setError] = useState("");
 
-  const students = [
-    {
-      name: "Priya Sharma",
-      rollNo: "ST-001",
-      className: "10-A",
-      attendance: "96%",
-      marks: "89%",
-      status: "Good",
-    },
-    {
-      name: "Rahul Kumar",
-      rollNo: "ST-002",
-      className: "10-A",
-      attendance: "84%",
-      marks: "72%",
-      status: "Good",
-    },
-    {
-      name: "Aman Verma",
-      rollNo: "ST-003",
-      className: "10-A",
-      attendance: "68%",
-      marks: "51%",
-      status: "At Risk",
-    },
-    {
-      name: "Sneha Gupta",
-      rollNo: "ST-004",
-      className: "10-A",
-      attendance: "91%",
-      marks: "86%",
-      status: "Good",
-    },
-  ];
+  useEffect(() => {
+    let active = true;
+    api.get("/teacher/classes")
+      .then((response) => {
+        if (active) setClasses((response.data.classes || []).filter((classData) => recordId(classData)));
+      })
+      .catch((requestError) => {
+        if (active) setError(requestError.response?.data?.message || "Could not load classes");
+      })
+      .finally(() => {
+        if (active) setLoadingClasses(false);
+      });
+    return () => { active = false; };
+  }, []);
 
-  const classes = [
-    {
-      className: "10-A",
-      department: "Science",
-      students: 42,
-      attendance: "91%",
-      marks: "82%",
-      status: "Good",
+  useEffect(() => {
+    const classId = recordId(selectedClass);
+    if (!classId) {
+      return undefined;
+    }
+
+    let active = true;
+    Promise.all([
+      api.get("/teacher/students", {
+        params: { subjectId: classId, page: 0, limit: pageLimit },
+      }),
+      api.get("/teacher/attendance", { params: { classId, month } }),
+    ])
+      .then(async ([studentResponse, attendanceResponse]) => {
+        const firstPage = studentResponse.data.students || [];
+        const total = Number(studentResponse.data.total) || firstPage.length;
+        const pageCount = Math.ceil(total / pageLimit);
+        const remainingPages = await Promise.all(
+          Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) =>
+            api.get("/teacher/students", {
+              params: { subjectId: classId, page: index + 1, limit: pageLimit },
+            })
+          )
+        );
+        if (active) {
+          const loadedStudents = [
+            ...firstPage,
+            ...remainingPages.flatMap((page) => page.data.students || []),
+          ].filter((student) => recordId(student));
+          setAvailableStudents([...new Map(loadedStudents.map((student) => [String(recordId(student)), student])).values()]);
+          setAttendanceRecords((attendanceResponse.data.attendance || []).filter(Boolean));
+        }
+      })
+      .catch((requestError) => {
+        if (active) setError(requestError.response?.data?.message || "Could not load students or attendance for this class and month");
+      })
+      .finally(() => {
+        if (active) setLoadingStudents(false);
+      });
+    return () => { active = false; };
+  }, [month, selectedClass]);
+
+  const studentsForReport = useMemo(
+    () => {
+      const selected = selectedStudents.filter((student) => recordId(student));
+      return selected.length ? selected : availableStudents.filter((student) => recordId(student));
     },
-    {
-      className: "10-B",
-      department: "Commerce",
-      students: 38,
-      attendance: "86%",
-      marks: "76%",
-      status: "Good",
-    },
-    {
-      className: "9-A",
-      department: "Science",
-      students: 40,
-      attendance: "74%",
-      marks: "69%",
-      status: "Needs Attention",
-    },
-  ];
+    [availableStudents, selectedStudents]
+  );
 
-  const fieldStyle = {
-    "& .MuiOutlinedInput-root": {
-      height: 44,
-      borderRadius: "7px",
-      backgroundColor: "#fff",
-      fontSize: "13px",
-
-      "& fieldset": {
-        borderColor: "#d9e0e8",
-      },
-
-      "&:hover fieldset": {
-        borderColor: "#b8c4d2",
-      },
-
-      "&.Mui-focused fieldset": {
-        borderColor: "#1976d2",
-      },
-    },
-
-    "& .MuiInputLabel-root": {
-      fontSize: "13px",
-      color: "#667085",
-    },
-  };
-
-  const handleChange = (field, value) => {
-    setFilters((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-
+  const resetReport = () => {
+    setSelectedClass(null);
+    setSelectedStudents([]);
+    setReportStudents([]);
+    setAttendanceRecords([]);
+    setReportSummary({ present: 0, absent: 0, marked: 0, rate: 0 });
+    setMonth(currentMonth());
     setReportCreated(false);
     setError("");
   };
 
   const createReport = () => {
-    if (!filters.academicYear) {
-      setError("Please select academic year.");
+    if (!recordId(selectedClass)) {
+      setError("Select a class subject to create a report.");
+      return;
+    }
+    if (loadingStudents) {
+      setError("Wait for the enrolled student list to finish loading.");
+      return;
+    }
+    if (!studentsForReport.length && reportType === "student") {
+      setError("No students are enrolled in this class subject yet.");
       return;
     }
 
-    if (!filters.department) {
-      setError("Please select department.");
-      return;
-    }
-
-    if (!filters.className) {
-      setError("Please select class.");
-      return;
-    }
-
-    if (!filters.fromDate || !filters.toDate) {
-      setError("Please select date range.");
-      return;
-    }
-
-    if (filters.fromDate > filters.toDate) {
-      setError("From date cannot be greater than To date.");
-      return;
-    }
-
-    setError("");
-    setReportCreated(true);
-  };
-
-  const resetFilters = () => {
-    setFilters({
-      academicYear: "",
-      department: "",
-      className: "",
-      subject: "",
-      fromDate: "",
-      toDate: "",
+    const totalsByStudent = new Map();
+    attendanceRecords.forEach((record) => {
+      if (!record?.studentId || !["Present", "Absent"].includes(record.status)) return;
+      const studentId = String(record.studentId?._id || record.studentId);
+      const totals = totalsByStudent.get(studentId) || { present: 0, absent: 0 };
+      if (record.status === "Present") totals.present += 1;
+      if (record.status === "Absent") totals.absent += 1;
+      totalsByStudent.set(studentId, totals);
     });
-
-    setReportCreated(false);
+    const rows = studentsForReport.filter((student) => recordId(student)).map((student) => {
+      const totals = totalsByStudent.get(String(recordId(student))) || { present: 0, absent: 0 };
+      const marked = totals.present + totals.absent;
+      return { ...student, ...totals, marked, attendanceRate: marked ? Math.round((totals.present / marked) * 100) : 0 };
+    });
+    const present = rows.reduce((sum, student) => sum + student.present, 0);
+    const absent = rows.reduce((sum, student) => sum + student.absent, 0);
+    const marked = present + absent;
+    setReportStudents(rows);
+    setReportSummary({ present, absent, marked, rate: marked ? Math.round((present / marked) * 100) : 0 });
+    setReportCreated(true);
     setError("");
-  };
-
-  const handlePrint = () => {
-    window.print();
   };
 
   const handleExport = () => {
-    const data =
-      reportType === "student"
-        ? students
-        : classes;
-
-    const headers =
-      reportType === "student"
-        ? [
-            "Student",
-            "Roll No",
-            "Class",
-            "Attendance",
-            "Marks",
-            "Status",
-          ]
-        : [
-            "Class",
-            "Department",
-            "Students",
-            "Attendance",
-            "Marks",
-            "Status",
-          ];
-
-    const rows = data.map((item) =>
-      reportType === "student"
-        ? [
-            item.name,
-            item.rollNo,
-            item.className,
-            item.attendance,
-            item.marks,
-            item.status,
-          ]
-        : [
-            item.className,
-            item.department,
-            item.students,
-            item.attendance,
-            item.marks,
-            item.status,
-          ]
-    );
-
-    const csv = [
-      headers.join(","),
-      ...rows.map((row) => row.join(",")),
-    ].join("\n");
-
-    const blob = new Blob([csv], {
-      type: "text/csv",
-    });
-
-    const url = URL.createObjectURL(blob);
-
+    if (!recordId(selectedClass)) return;
+    const safeReportStudents = reportStudents.filter((student) => recordId(student));
+    const studentRows = safeReportStudents.map((student) => [
+      student.name,
+      student.rollNo,
+      student.className,
+      student.department,
+      student.academicYear,
+      student.email,
+      student.present,
+      student.absent,
+      student.marked,
+      student.marked ? `${student.attendanceRate}%` : "No records",
+    ]);
+    const rows = reportType === "class"
+      ? [
+          ["Subject", "Subject Code", "Class", "Department", "Location", "Month", "Schedule", "Start Time", "End Time", "Student", "Roll Number", "Present", "Absent", "Marked Days", "Attendance %"],
+          ...(safeReportStudents.length ? safeReportStudents : [null]).map((student) => [
+            selectedClass.subject,
+            selectedClass.subjectCode,
+            selectedClass.className,
+            selectedClass.department,
+            selectedClass.location,
+            month,
+            selectedClass.dayAndWeek === "Week System" ? (selectedClass.days || []).join("; ") : formatDate(selectedClass.date),
+            formatTime(selectedClass.startTime),
+            formatTime(selectedClass.endTime),
+            student?.name || "",
+            student?.rollNo || "",
+            student?.present ?? "",
+            student?.absent ?? "",
+            student?.marked ?? "",
+            student?.marked ? `${student.attendanceRate}%` : "No records",
+          ]),
+        ]
+      : [
+          ["Student", "Roll Number", "Class", "Department", "Academic Year", "Email", "Present", "Absent", "Marked Days", "Attendance %"],
+          ...studentRows,
+        ];
+    const csv = rows.map((row) => row.map(escapeCsv).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a");
-
     link.href = url;
-    link.download = `${reportType}-report.csv`;
-
+    link.download = `${reportType}-report-${selectedClass.subjectCode || "class"}-${month}.csv`;
     link.click();
-
     URL.revokeObjectURL(url);
   };
 
-  const reportData =
-    reportType === "student"
-      ? students
-      : classes;
+  const handlePrint = () => window.print();
 
   return (
-    <div className="min-h-screen bg-[#f7f8fa] p-4 md:p-6">
-
-      {/* HEADER */}
-
-      <div className="mb-5 flex flex-col justify-between gap-3 md:flex-row md:items-center">
-
-        <div>
-          <div className="flex items-center gap-2">
-            <FiBarChart2
-              size={21}
-              className="text-blue-600"
-            />
-
-            <h1 className="text-xl font-semibold text-gray-800">
-              Reports
-            </h1>
+    <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+      <style>{`@media print {
+        body * { visibility: hidden !important; }
+        .report-print-area, .report-print-area * { visibility: visible !important; }
+        .report-print-area { position: absolute; inset: 0; width: 100%; margin: 0 !important; border: 0 !important; box-shadow: none !important; }
+        .report-no-print { display: none !important; }
+      }`}</style>
+      <div className="mx-auto max-w-[1500px]">
+        <header className="report-no-print mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <div>
+            <div className="flex items-center gap-2 text-blue-700"><FiBarChart2 size={21} /><h1 className="text-xl font-semibold text-slate-900">Reports</h1></div>
+            <p className="mt-1 text-sm text-slate-500">Review monthly attendance and student enrollment from saved classes.</p>
           </div>
+          <Button variant="outlined" startIcon={<FiRefreshCcw size={15} />} onClick={resetReport} className="!w-fit !normal-case">Reset</Button>
+        </header>
 
-          <p className="mt-1 text-sm text-gray-500">
-            Create student and class reports using filters.
-          </p>
-        </div>
-
-        <Button
-          variant="outlined"
-          startIcon={<FiRefreshCcw size={15} />}
-          onClick={resetFilters}
-          sx={{
-            textTransform: "none",
-            borderRadius: "7px",
-            fontSize: "13px",
-          }}
-        >
-          Reset
-        </Button>
-
-      </div>
-
-      {/* MAIN FILTER CARD */}
-
-      <div className="rounded-xl border border-gray-200 bg-white p-5">
-
-        {/* REPORT TYPE */}
-
-        <div className="mb-6">
-
-          <h2 className="mb-3 text-sm font-semibold text-gray-800">
-            Report Type
-          </h2>
-
-          <div className="flex flex-wrap gap-3">
-
-            <button
-              type="button"
-              onClick={() => {
-                setReportType("student");
-                setReportCreated(false);
-              }}
-              className={`rounded-lg border px-5 py-3 text-sm font-medium transition ${
-                reportType === "student"
-                  ? "border-blue-600 bg-blue-50 text-blue-600"
-                  : "border-gray-200 text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              Student Report
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setReportType("class");
-                setReportCreated(false);
-              }}
-              className={`rounded-lg border px-5 py-3 text-sm font-medium transition ${
-                reportType === "class"
-                  ? "border-blue-600 bg-blue-50 text-blue-600"
-                  : "border-gray-200 text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              Class Report
-            </button>
-
-          </div>
-
-        </div>
-
-        {/* DIVIDER */}
-
-        <div className="mb-6 border-t border-gray-100" />
-
-        {/* FILTERS */}
-
-        <h2 className="mb-4 text-sm font-semibold text-gray-800">
-          Filters
-        </h2>
-
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-
-          {/* ACADEMIC YEAR */}
-
-          <TextField
-            select
-            fullWidth
-            size="small"
-            label="Academic Year"
-            value={filters.academicYear}
-            onChange={(e) =>
-              handleChange(
-                "academicYear",
-                e.target.value
-              )
-            }
-            sx={fieldStyle}
-          >
-            <MenuItem value="">
-              Select Academic Year
-            </MenuItem>
-
-            <MenuItem value="2026-27">
-              2026-27
-            </MenuItem>
-
-            <MenuItem value="2025-26">
-              2025-26
-            </MenuItem>
-          </TextField>
-
-          {/* DEPARTMENT */}
-
-          <TextField
-            select
-            fullWidth
-            size="small"
-            label="Department"
-            value={filters.department}
-            onChange={(e) =>
-              handleChange(
-                "department",
-                e.target.value
-              )
-            }
-            sx={fieldStyle}
-          >
-            <MenuItem value="">
-              Select Department
-            </MenuItem>
-
-            <MenuItem value="Science">
-              Science
-            </MenuItem>
-
-            <MenuItem value="Commerce">
-              Commerce
-            </MenuItem>
-
-            <MenuItem value="Arts">
-              Arts
-            </MenuItem>
-          </TextField>
-
-          {/* CLASS */}
-
-          <TextField
-            select
-            fullWidth
-            size="small"
-            label="Class"
-            value={filters.className}
-            onChange={(e) =>
-              handleChange(
-                "className",
-                e.target.value
-              )
-            }
-            sx={fieldStyle}
-          >
-            <MenuItem value="">
-              Select Class
-            </MenuItem>
-
-            <MenuItem value="9-A">
-              9-A
-            </MenuItem>
-
-            <MenuItem value="9-B">
-              9-B
-            </MenuItem>
-
-            <MenuItem value="10-A">
-              10-A
-            </MenuItem>
-
-            <MenuItem value="10-B">
-              10-B
-            </MenuItem>
-
-            <MenuItem value="11-A">
-              11-A
-            </MenuItem>
-
-            <MenuItem value="12-A">
-              12-A
-            </MenuItem>
-          </TextField>
-
-          {/* SUBJECT */}
-
-          <TextField
-            select
-            fullWidth
-            size="small"
-            label="Subject"
-            value={filters.subject}
-            onChange={(e) =>
-              handleChange(
-                "subject",
-                e.target.value
-              )
-            }
-            sx={fieldStyle}
-          >
-            <MenuItem value="">
-              All Subjects
-            </MenuItem>
-
-            <MenuItem value="Mathematics">
-              Mathematics
-            </MenuItem>
-
-            <MenuItem value="Physics">
-              Physics
-            </MenuItem>
-
-            <MenuItem value="Chemistry">
-              Chemistry
-            </MenuItem>
-
-            <MenuItem value="English">
-              English
-            </MenuItem>
-          </TextField>
-
-          {/* FROM DATE */}
-
-          <TextField
-            fullWidth
-            size="small"
-            type="date"
-            label="From Date"
-            value={filters.fromDate}
-            onChange={(e) =>
-              handleChange(
-                "fromDate",
-                e.target.value
-              )
-            }
-            InputLabelProps={{
-              shrink: true,
-            }}
-            sx={fieldStyle}
-          />
-
-          {/* TO DATE */}
-
-          <TextField
-            fullWidth
-            size="small"
-            type="date"
-            label="To Date"
-            value={filters.toDate}
-            onChange={(e) =>
-              handleChange(
-                "toDate",
-                e.target.value
-              )
-            }
-            InputLabelProps={{
-              shrink: true,
-            }}
-            sx={fieldStyle}
-          />
-
-        </div>
-
-        {/* ERROR */}
-
-        {error && (
-          <p className="mt-4 text-sm text-red-500">
-            {error}
-          </p>
-        )}
-
-        {/* CREATE BUTTON */}
-
-        <div className="mt-6 flex justify-end border-t border-gray-100 pt-5">
-
-          <Button
-            variant="contained"
-            onClick={createReport}
-            sx={{
-              minWidth: 145,
-              height: 42,
-              borderRadius: "7px",
-              backgroundColor: "#1976d2",
-              textTransform: "none",
-              fontSize: "13px",
-              boxShadow: "none",
-
-              "&:hover": {
-                backgroundColor: "#1565c0",
-                boxShadow: "none",
-              },
-            }}
-          >
-            Create Report
-          </Button>
-
-        </div>
-
-      </div>
-
-      {/* REPORT */}
-
-      {reportCreated && (
-        <div className="mt-5 rounded-xl border border-gray-200 bg-white">
-
-          {/* REPORT HEADER */}
-
-          <div className="flex flex-col justify-between gap-3 border-b border-gray-200 p-5 md:flex-row md:items-center">
-
-            <div>
-              <h2 className="text-base font-semibold text-gray-800">
-                {reportType === "student"
-                  ? "Student Report"
-                  : "Class Report"}
-              </h2>
-
-              <p className="mt-1 text-xs text-gray-500">
-                {filters.className} •{" "}
-                {filters.department} •{" "}
-                {filters.academicYear}
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-
+        <section className="report-no-print rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          <h2 className="mb-3 text-sm font-semibold text-slate-800">Report type</h2>
+          <div className="mb-5 flex flex-wrap gap-3">
+            {[{ id: "student", label: "Student Report" }, { id: "class", label: "Class Report" }].map((type) => (
               <Button
-                variant="outlined"
-                startIcon={<FiPrinter size={14} />}
-                onClick={handlePrint}
-                sx={{
-                  textTransform: "none",
-                  borderRadius: "7px",
-                  fontSize: "12px",
-                }}
+                key={type.id}
+                variant={reportType === type.id ? "contained" : "outlined"}
+                onClick={() => { setReportType(type.id); setReportCreated(false); }}
+                className={reportType === type.id ? "!bg-blue-700 !normal-case" : "!normal-case"}
               >
-                Print
+                {type.label}
               </Button>
-
-              <Button
-                variant="contained"
-                startIcon={<FiDownload size={14} />}
-                onClick={handleExport}
-                sx={{
-                  textTransform: "none",
-                  borderRadius: "7px",
-                  fontSize: "12px",
-                  boxShadow: "none",
-                }}
-              >
-                Export
-              </Button>
-
-            </div>
-
+            ))}
           </div>
 
-          {/* SIMPLE SUMMARY */}
-
-          <div className="grid grid-cols-2 border-b border-gray-100 md:grid-cols-4">
-
-            <Summary
-              title={
-                reportType === "student"
-                  ? "Total Students"
-                  : "Total Classes"
-              }
-              value={
-                reportType === "student"
-                  ? "124"
-                  : "18"
-              }
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <Autocomplete
+              options={classes.filter((classData) => recordId(classData))}
+              value={selectedClass}
+              loading={loadingClasses}
+              onChange={(_, value) => {
+                setSelectedClass(value);
+                setAvailableStudents([]);
+                setSelectedStudents([]);
+                setAttendanceRecords([]);
+                setLoadingStudents(Boolean(value));
+                setReportCreated(false);
+                setError("");
+              }}
+              getOptionLabel={classLabel}
+              isOptionEqualToValue={sameRecord}
+              renderInput={(params) => <TextField {...params} label="Class subject" placeholder="Choose a saved class subject" />}
             />
-
-            <Summary
-              title="Attendance"
-              value="87%"
+            <TextField
+              type="month"
+              label="Report month"
+              value={month}
+              onChange={(event) => {
+                if (!event.target.value) return;
+                setMonth(event.target.value);
+                setReportCreated(false);
+                setLoadingStudents(Boolean(selectedClass));
+                setError("");
+              }}
+              slotProps={{ inputLabel: { shrink: true } }}
             />
-
-            <Summary
-              title="Average Marks"
-              value="78%"
+            <Autocomplete
+              multiple
+              options={availableStudents.filter((student) => recordId(student))}
+              value={selectedStudents.filter((student) => recordId(student))}
+              loading={loadingStudents}
+              disabled={!selectedClass || loadingStudents}
+              onChange={(_, values) => { setSelectedStudents(values.filter((student) => recordId(student))); setReportCreated(false); }}
+              getOptionLabel={(student) => student ? `${student.name || "Student"} · ${student.rollNo || "No roll number"}` : ""}
+              isOptionEqualToValue={sameRecord}
+              renderTags={(values, getTagProps) => values.filter((student) => recordId(student)).map((student, index) => (
+                <Chip {...getTagProps({ index })} key={recordId(student) || index} size="small" label={`${student.name || "Student"} · ${student.rollNo || "No roll number"}`} />
+              ))}
+              noOptionsText={selectedClass ? "No enrolled students" : "Select a class subject first"}
+              renderInput={(params) => <TextField {...params} label="Students (optional)" placeholder="Choose specific students or leave empty for all" />}
             />
-
-            <Summary
-              title="Pass Rate"
-              value="92%"
-            />
-
           </div>
+          <p className="mt-2 text-xs text-slate-500">Choose specific students for a focused report, or leave the student selector empty for the full class roster. Attendance percentages use the records marked in the selected month.</p>
 
-          {/* TABLE */}
+          {error && <Alert severity="error" className="!mt-4">{error}</Alert>}
 
-          <div className="overflow-x-auto p-5">
+          <div className="mt-5 flex justify-end border-t border-slate-100 pt-4">
+            <Button variant="contained" onClick={createReport} disabled={loadingClasses || loadingStudents} className="!min-w-36 !bg-blue-700 !normal-case">
+              {loadingStudents ? <><CircularProgress size={17} color="inherit" className="!mr-2" />Loading students</> : "Create Report"}
+            </Button>
+          </div>
+        </section>
 
-            <table className="w-full min-w-[700px] border-collapse">
+        {reportCreated && selectedClass && (
+          <section className="report-print-area mt-5 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <header className="flex flex-col justify-between gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:p-5">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">{reportType === "student" ? "Student Report" : "Class Report"}</h2>
+                <p className="mt-1 text-sm text-slate-500">{classLabel(selectedClass)} · {formatMonth(month)}</p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outlined" startIcon={<FiPrinter size={14} />} onClick={handlePrint} className="!normal-case">Print</Button>
+                <Button variant="contained" startIcon={<FiDownload size={14} />} onClick={handleExport} className="!bg-blue-700 !normal-case">Export CSV</Button>
+              </div>
+            </header>
 
-              <thead>
+              <div className="grid grid-cols-2 border-b border-slate-100 sm:grid-cols-4">
+                <ReportDetail label="Students" value={reportStudents.filter((student) => recordId(student)).length} />
+                <ReportDetail label="Present marks" value={reportSummary.present} />
+                <ReportDetail label="Absent marks" value={reportSummary.absent} />
+                <ReportDetail label="Attendance rate" value={reportSummary.marked ? `${reportSummary.rate}%` : "No records"} />
+              </div>
 
-                <tr className="bg-gray-50">
+            {reportType === "class" && (
+              <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-2 lg:grid-cols-4">
+                <ReportDetail label="Subject" value={selectedClass.subject} />
+                <ReportDetail label="Department" value={selectedClass.department} />
+                <ReportDetail label="Location" value={selectedClass.location} />
+                <ReportDetail label="Report month" value={formatMonth(month)} />
+                <ReportDetail label="Schedule" value={selectedClass.dayAndWeek === "Week System" ? (selectedClass.days || []).join(", ") : formatDate(selectedClass.date)} />
+                <ReportDetail label="Time" value={`${formatTime(selectedClass.startTime)} – ${formatTime(selectedClass.endTime)} IST`} />
+              </div>
+            )}
 
-                  {reportType === "student" ? (
-                    <>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">
-                        Student
-                      </th>
-
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">
-                        Roll No
-                      </th>
-
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">
-                        Class
-                      </th>
-
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">
-                        Attendance
-                      </th>
-
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">
-                        Marks
-                      </th>
-
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">
-                        Status
-                      </th>
-                    </>
-                  ) : (
-                    <>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">
-                        Class
-                      </th>
-
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">
-                        Department
-                      </th>
-
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">
-                        Students
-                      </th>
-
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">
-                        Attendance
-                      </th>
-
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">
-                        Marks
-                      </th>
-
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">
-                        Status
-                      </th>
-                    </>
-                  )}
-
-                </tr>
-
-              </thead>
-
-              <tbody>
-
-                {reportData.map((item, index) => (
-
-                  <tr
-                    key={index}
-                    className="border-b border-gray-100 hover:bg-gray-50"
-                  >
-
-                    {reportType === "student" ? (
-                      <>
-                        <td className="px-4 py-4 text-sm font-medium text-gray-800">
-                          {item.name}
-                        </td>
-
-                        <td className="px-4 py-4 text-sm text-gray-500">
-                          {item.rollNo}
-                        </td>
-
-                        <td className="px-4 py-4 text-sm text-gray-500">
-                          {item.className}
-                        </td>
-
-                        <td className="px-4 py-4 text-sm text-gray-600">
-                          {item.attendance}
-                        </td>
-
-                        <td className="px-4 py-4 text-sm text-gray-600">
-                          {item.marks}
-                        </td>
-
-                        <td className="px-4 py-4">
-                          <Status status={item.status} />
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td className="px-4 py-4 text-sm font-medium text-gray-800">
-                          {item.className}
-                        </td>
-
-                        <td className="px-4 py-4 text-sm text-gray-500">
-                          {item.department}
-                        </td>
-
-                        <td className="px-4 py-4 text-sm text-gray-500">
-                          {item.students}
-                        </td>
-
-                        <td className="px-4 py-4 text-sm text-gray-600">
-                          {item.attendance}
-                        </td>
-
-                        <td className="px-4 py-4 text-sm text-gray-600">
-                          {item.marks}
-                        </td>
-
-                        <td className="px-4 py-4">
-                          <Status status={item.status} />
-                        </td>
-                      </>
-                    )}
-
+            <div className="overflow-x-auto p-4 sm:p-5">
+              <table className="w-full min-w-[1040px] border-collapse text-left">
+                <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Student</th>
+                    <th className="px-4 py-3">Roll Number</th>
+                    <th className="px-4 py-3">Class</th>
+                    <th className="px-4 py-3">Department</th>
+                    <th className="px-4 py-3">Present</th>
+                    <th className="px-4 py-3">Absent</th>
+                    <th className="px-4 py-3">Marked Days</th>
+                    <th className="px-4 py-3">Attendance</th>
                   </tr>
+                </thead>
+                <tbody>
+                  {reportStudents.filter((student) => recordId(student)).map((student) => (
+                    <tr key={recordId(student)} className="border-b border-slate-100 text-sm last:border-0">
+                      <td className="px-4 py-3 font-medium text-slate-800">{student.name}</td>
+                      <td className="px-4 py-3 font-mono text-slate-600">{student.rollNo}</td>
+                      <td className="px-4 py-3 text-slate-600">{student.className}</td>
+                      <td className="px-4 py-3 text-slate-600">{student.department}</td>
+                      <td className="px-4 py-3 font-semibold text-emerald-700">{student.present}</td>
+                      <td className="px-4 py-3 font-semibold text-rose-700">{student.absent}</td>
+                      <td className="px-4 py-3 text-slate-600">{student.marked}</td>
+                      <td className="px-4 py-3 font-semibold text-slate-800">{student.marked ? `${student.attendanceRate}%` : "No records"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {!reportStudents.some((student) => recordId(student)) && <p className="py-6 text-center text-sm text-slate-500">No students are enrolled in this class subject.</p>}
+            </div>
+          </section>
+        )}
+      </div>
+    </main>
+  );
+}
 
-                ))}
-
-              </tbody>
-
-            </table>
-
-          </div>
-
-        </div>
-      )}
-
+function ReportDetail({ label, value }) {
+  return (
+    <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5">
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-slate-800">{value ?? "—"}</p>
     </div>
   );
 }
 
-
-// SUMMARY
-
-function Summary({ title, value }) {
-  return (
-    <div className="border-r border-gray-100 p-5 last:border-r-0">
-
-      <p className="text-xs text-gray-500">
-        {title}
-      </p>
-
-      <p className="mt-1 text-xl font-semibold text-gray-800">
-        {value}
-      </p>
-
-    </div>
-  );
+function formatDate(value) {
+  if (!value || Number.isNaN(new Date(value).getTime())) return "—";
+  return new Date(value).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric" });
 }
 
+function formatMonth(value) {
+  if (!/^\d{4}-\d{2}$/.test(value)) return value;
+  const [year, month] = value.split("-").map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+}
 
-// STATUS
-
-function Status({ status }) {
-  const good = status === "Good";
-
-  return (
-    <span
-      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-        good
-          ? "bg-green-50 text-green-600"
-          : "bg-orange-50 text-orange-600"
-      }`}
-    >
-      {status}
-    </span>
-  );
+function formatTime(value) {
+  if (!value || Number.isNaN(new Date(value).getTime())) return "—";
+  return new Date(value).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true });
 }

@@ -1,30 +1,48 @@
-import { Button } from '@mui/material';
+import { useState } from "react";
+import { Button } from "@mui/material";
 import { IoIosAdd } from "react-icons/io";
-import StudentTable from '../components/studentTable';
-import { useState } from 'react';
-import StudentFrom from '../forms/studentForm';
-
+import StudentTable from "../components/studentTable";
+import StudentForm from "../forms/studentForm";
 
 export default function Student() {
-  const [statusForm,setStatusForm] = useState(false);
- 
+  const [formOpen, setFormOpen] = useState(false);
+  const [editStudent, setEditStudent] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-	return (
-		<>
-   <StudentFrom open={statusForm} onClose={()=>{setStatusForm(false)}} />  
+  const closeForm = () => {
+    setFormOpen(false);
+    setEditStudent(null);
+  };
 
-			{/* Header */}
-			<div className="flex justify-between py-8 px-8">
-				<div className="text-xl font-semibold">Student Management	</div>
-				<Button onClick={()=>{setStatusForm(true)}} color="success" variant="contained" className="!rounded-full !min-w-0 !w-9 !h-9 !p-1"	>
-					<IoIosAdd className="!w-12 !mx-auto !text-3xl" /></Button>
-			</div>
+  return (
+    <main className="min-h-full bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1600px]">
+        <StudentForm
+          key={editStudent?._id || "new-student"}
+          open={formOpen}
+          onClose={closeForm}
+          editData={editStudent}
+          onSuccess={() => setRefreshKey((current) => current + 1)}
+        />
 
-			{/* Student Table */}
-    <StudentTable />
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Student Management</h1>
+            <p className="mt-1 text-sm text-slate-500">Manage student profiles, enrolled subjects, and academic details.</p>
+          </div>
+          <Button
+            onClick={() => setFormOpen(true)}
+            variant="contained"
+            color="primary"
+            startIcon={<IoIosAdd className="text-xl" />}
+            className="!h-11 !w-fit !rounded-lg !bg-blue-700 !px-5 !font-semibold !normal-case hover:!bg-blue-800"
+          >
+            Add Student
+          </Button>
+        </header>
 
-			
-  
-		</>
-	);
+        <StudentTable key={refreshKey} onEdit={(student) => { setEditStudent(student); setFormOpen(true); }} />
+      </div>
+    </main>
+  );
 }

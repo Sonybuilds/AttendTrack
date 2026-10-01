@@ -1,229 +1,118 @@
-import Button from '@mui/material/Button';
-import Typography from '@mui/material/Typography';
+import Button from "@mui/material/Button";
 import {
+  HiOutlineArrowRight,
   HiOutlineClock,
   HiOutlineLocationMarker,
-  HiOutlineUsers,
+  HiOutlineMail,
   HiOutlinePencil,
   HiOutlineTrash,
-  HiOutlineArrowRight,
-} from 'react-icons/hi';
-import { useNavigate } from 'react-router-dom';
-export default function ClassCard({ classData , onDelete}) {
+  HiOutlineUsers,
+} from "react-icons/hi";
+import { useNavigate } from "react-router-dom";
+
+export default function ClassCard({ classData, onDelete, onEdit, onEmailSchedule, sendingEmail }) {
   const navigate = useNavigate();
+  const isWeekSystem = classData.dayAndWeek === "Week System";
 
-
-  const isWeekSystem = classData.dayAndWeek === 'Week System';
-
-  const formatTime = (time) => {
-    if (!time) return '--';
-
-    return new Date(time).toLocaleTimeString('en-IN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
+  const formatDateTime = (value, options) => {
+    if (!value || Number.isNaN(new Date(value).getTime())) return "—";
+    return new Date(value).toLocaleString("en-IN", options);
   };
 
-  const formatDate = (date) => {
-    if (!date) return '--';
-
-    return new Date(date).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
-  
-
+  const schedule = isWeekSystem
+    ? classData.days?.length
+      ? classData.days.join(" · ")
+      : "No days selected"
+    : formatDateTime(classData.date, {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
 
   return (
-    <div className="group w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl">
-
-      {/* ================= HEADER ================= */}
-      <div className="relative overflow-hidden border-b border-slate-100 bg-gradient-to-br from-slate-50 to-white px-5 py-5">
-
-        {/* Decorative circle */}
-        <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-blue-50 transition-transform duration-500 group-hover:scale-125" />
-
-        <div className="relative flex items-start justify-between gap-3">
-
+    <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg">
+      <div className="flex flex-1 flex-col p-5">
+        <header className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="mb-2 flex items-center gap-2">
-              <span className="rounded-md bg-blue-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-blue-700">
-                {classData.subjectCode}
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="rounded-md bg-blue-50 px-2 py-1 text-[11px] font-bold tracking-wide text-blue-800">
+                {classData.subjectCode || "NO CODE"}
               </span>
-
-              <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+              <span className="text-xs font-medium text-slate-500">
                 {classData.department}
               </span>
             </div>
-
-            <Typography
-              className="!truncate !text-lg !font-bold !leading-6 !text-slate-900"
-            >
+            <h2 className="truncate text-lg font-semibold leading-6 text-slate-900">
               {classData.subject}
-            </Typography>
-
-            <p className="mt-1 truncate text-xs font-medium text-slate-500">
-              {classData.className}
-            </p>
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">{classData.className}</p>
           </div>
-
-          {/* Status */}
           <span
-            className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${
-              classData.active
-                ? 'bg-emerald-100 text-emerald-700'
-                : 'bg-red-100 text-red-700'
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+              classData.active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"
             }`}
           >
-            <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-current" />
-            {classData.active ? 'Active' : 'Inactive'}
+            <span className={`h-1.5 w-1.5 rounded-full ${classData.active ? "bg-emerald-500" : "bg-slate-400"}`} />
+            {classData.active ? "Active" : "Inactive"}
           </span>
-        </div>
-      </div>
+        </header>
 
-      {/* ================= BODY ================= */}
-      <div className="space-y-3 p-5">
+        <div className="my-4 border-t border-slate-100" />
 
-        {/* Schedule */}
-        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4 transition-colors group-hover:border-blue-100">
-
-          <div className="flex items-center gap-3">
-
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm">
-              <HiOutlineClock className="text-xl" />
-            </div>
-
+        <section className="rounded-lg bg-slate-50 px-3.5 py-3" aria-label="Class schedule">
+          <div className="flex items-start gap-3">
+            <HiOutlineClock className="mt-0.5 shrink-0 text-lg text-blue-700" />
             <div className="min-w-0 flex-1">
-
-              <div className="mb-1 flex items-center justify-between">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Schedule
-                </p>
-
-                <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-semibold text-slate-500 shadow-sm">
-                  {classData.dayAndWeek}
-                </span>
+              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Schedule</p>
+                <span className="text-[11px] font-medium text-slate-400">{classData.dayAndWeek}</span>
               </div>
-
-              {isWeekSystem ? (
-                <p className="truncate text-sm font-bold text-slate-800">
-                  {classData.days?.length
-                    ? classData.days.join(' • ')
-                    : 'No days selected'}
-                </p>
-              ) : (
-                <p className="text-sm font-bold text-slate-800">
-                  {formatDate(classData.date)}
-                </p>
-              )}
-
-              <p className="mt-0.5 text-xs font-medium text-slate-500">
-                {formatTime(classData.startTime)}
-                <span className="mx-1.5 text-slate-300">→</span>
-                {formatTime(classData.endTime)}
-              </p>
-
-            </div>
-          </div>
-        </div>
-
-        {/* Location */}
-        <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-rose-500 shadow-sm">
-            <HiOutlineLocationMarker className="text-xl" />
-          </div>
-
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Location
-            </p>
-
-            <p className="mt-0.5 truncate text-sm font-semibold text-slate-800">
-              {classData.location || 'Not specified'}
-            </p>
-          </div>
-        </div>
-
-        {/* Students */}
-        <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-
-          <div className="flex items-center gap-3">
-
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-violet-600 shadow-sm">
-              <HiOutlineUsers className="text-xl" />
-            </div>
-
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Students
-              </p>
-
-              <p className="mt-0.5 text-lg font-bold text-slate-800">
-                {classData.totalStudent ?? 0}
-                <span className="ml-1 text-xs font-medium text-slate-400">
-                  Enrolled
-                </span>
+              <p className="mt-1 truncate text-sm font-semibold text-slate-800">{schedule}</p>
+              <p className="mt-0.5 text-xs text-slate-500">
+                {formatDateTime(classData.startTime, { hour: "2-digit", minute: "2-digit", hour12: true })}
+                <span className="mx-1.5 text-slate-300">—</span>
+                {formatDateTime(classData.endTime, { hour: "2-digit", minute: "2-digit", hour12: true })}
               </p>
             </div>
-
           </div>
+        </section>
 
-          {/* Active badge */}
-          <div className="text-right">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Status
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <section className="min-w-0 rounded-lg border border-slate-100 px-3.5 py-3" aria-label="Class location">
+            <div className="flex items-center gap-2 text-slate-400">
+              <HiOutlineLocationMarker className="text-base text-blue-700" />
+              <span className="text-[11px] font-semibold uppercase tracking-wide">Location</span>
+            </div>
+            <p className="mt-1.5 truncate text-sm font-medium text-slate-800" title={classData.location}>
+              {classData.location || "Not specified"}
             </p>
-
-            <p
-              className={`mt-1 text-xs font-bold ${
-                classData.active
-                  ? 'text-emerald-600'
-                  : 'text-red-500'
-              }`}
-            >
-              {classData.active ? 'Running' : 'Disabled'}
+          </section>
+          <section className="min-w-0 rounded-lg border border-slate-100 px-3.5 py-3" aria-label="Student capacity">
+            <div className="flex items-center gap-2 text-slate-400">
+              <HiOutlineUsers className="text-base text-blue-700" />
+              <span className="text-[11px] font-semibold uppercase tracking-wide">Capacity</span>
+            </div>
+            <p className="mt-1.5 text-sm font-semibold text-slate-800">
+              {classData.totalStudent ?? 0}<span className="ml-1 font-normal text-slate-500">students</span>
             </p>
-          </div>
-
+          </section>
         </div>
+
+        <footer className="mt-auto flex items-center gap-1 border-t border-slate-100 pt-4">
+          <Button size="small" startIcon={<HiOutlinePencil />} onClick={() => onEdit(classData)} className="!rounded-lg !px-2.5 !font-semibold !normal-case !text-slate-600 hover:!bg-slate-100">
+            Edit
+          </Button>
+          <Button size="small" startIcon={<HiOutlineTrash />} onClick={() => onDelete(classData._id)} className="!rounded-lg !px-2.5 !font-semibold !normal-case !text-rose-600 hover:!bg-rose-50">
+            Delete
+          </Button>
+          <Button size="small" startIcon={<HiOutlineMail />} onClick={() => onEmailSchedule(classData)} disabled={sendingEmail} title="Email this schedule to enrolled students" className="!rounded-lg !px-2 !font-semibold !normal-case !text-blue-700 hover:!bg-blue-50">
+            {sendingEmail ? "Sending…" : "Email"}
+          </Button>
+          <Button size="small" endIcon={<HiOutlineArrowRight />} onClick={() => navigate(`student-manage?classId=${classData._id}`, { state: { classData } })} className="!ml-auto !rounded-lg !px-3 !font-semibold !normal-case !text-blue-700 hover:!bg-blue-50">
+            Students
+          </Button>
+        </footer>
       </div>
-
-      {/* ================= FOOTER ================= */}
-      <div className="flex items-center gap-2 border-t border-slate-100 bg-slate-50/70 px-5 py-3">
-
-        {/* Edit */}
-        <Button
-          startIcon={<HiOutlinePencil />}
-          className="!h-9 !rounded-lg !bg-white !px-3 !text-xs !font-semibold !normal-case !text-slate-600 !shadow-sm hover:!bg-slate-100"
-        >
-          Edit
-        </Button>
-
-        {/* Delete */}
-        <Button
-          onClick={()=>{onDelete(classData._id)}}
-          startIcon={<HiOutlineTrash />}
-          color="error"
-          className="!h-9 !rounded-lg !px-3 !text-xs !font-semibold !normal-case"
-        >
-          Delete
-        </Button>
-
-        {/* View */}
-        <Button
-          onClick={() => navigate('student-manage')}
-          endIcon={<HiOutlineArrowRight />}
-          className="!ml-auto !h-9 !rounded-lg !bg-blue-700 !px-4 !text-xs !font-bold !normal-case !text-white !shadow-sm hover:!bg-blue-800"
-        >
-          Students
-        </Button>
-
-      </div>
-    </div>
+    </article>
   );
 }

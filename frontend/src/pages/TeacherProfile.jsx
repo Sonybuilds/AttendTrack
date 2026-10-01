@@ -1,503 +1,189 @@
-
+import { useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   Avatar,
   Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Snackbar,
+  TextField,
 } from "@mui/material";
+import { FiArrowLeft, FiEdit3, FiMail, FiMapPin, FiPhone, FiUser } from "react-icons/fi";
+import { useNavigate } from "react-router-dom";
+import api from "../api/axios";
 
-import {
-  FiArrowLeft,
-  FiBookOpen,
-  FiCalendar,
-  FiEdit3,
-  FiMail,
-  FiMapPin,
-  FiPhone,
-  FiUser,
-  FiUsers,
-  FiBarChart2,
-  FiBook,
-  FiZap,
-  FiClock,
-} from "react-icons/fi";
-
-import {
-  HiOutlineAcademicCap,
-  HiOutlineChartBar,
-} from "react-icons/hi2";
-
-
-const teacher = {
-  name: "Ms. Priya Sharma",
-  role: "Mathematics Teacher",
-  email: "priya.sharma@school.com",
-  phone: "+91 98765 43210",
-  location: "New Delhi, India",
-  dob: "15 Apr 1990",
-  gender: "Female",
-  address: "123 Green Park, New Delhi - 110016",
-  experience: "5+ Years Experience",
-  status: "Active",
-  classes: "9th, 10th, 11th, 12th",
-  students: "180",
-  workingSince: "July 2020",
-};
-
-
-
-
-const subjects = [
-  {
-    name: "Mathematics",
-    className: "bg-blue-50 text-blue-700",
-  },
-  {
-    name: "Physics",
-    className: "bg-green-50 text-green-700",
-  },
-  {
-    name: "Statistics",
-    className: "bg-purple-50 text-purple-700",
-  },
-  {
-    name: "Algebra",
-    className: "bg-red-50 text-red-600",
-  },
+const profileFields = [
+  { name: "name", label: "Full name", required: true },
+  { name: "email", label: "Email address", type: "email", required: true },
+  { name: "phone", label: "Phone number", type: "tel" },
+  { name: "location", label: "Location" },
+  { name: "dob", label: "Date of birth", type: "date" },
+  { name: "gender", label: "Gender" },
+  { name: "address", label: "Address", multiline: true },
+  { name: "qualification", label: "Highest qualification" },
+  { name: "specialization", label: "Specialization" },
+  { name: "graduationYear", label: "Graduation year", type: "number" },
+  { name: "certification", label: "Certification" },
+  { name: "experience", label: "Experience" },
+  { name: "workingSince", label: "Working since" },
 ];
 
-
-function InfoRow({ icon: Icon, label, value }) {
-  return (
-    <div className="flex items-start gap-5">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center text-[22px] text-[#244a7c]">
-        <Icon />
-      </div>
-
-      <div>
-        <p className="text-[14px] text-[#7890b0]">
-          {label}
-        </p>
-
-        <p className="mt-1 text-[14px] font-medium text-[#10254a]">
-          {value}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-
-
-
-
-
-function ProfileHero() {
-  return (
-    <div className="rounded-xl border border-[#e8edf4] bg-white p-7 shadow-[0_3px_15px_rgba(31,73,125,0.04)]">
-
-      <div className="flex flex-col gap-6 md:flex-row md:items-center">
-
-        {/* Avatar */}
-        <div className="relative shrink-0">
-
-          <Avatar
-            src="/images/teacher.jpg"
-            alt={teacher.name}
-            sx={{
-              width: 150,
-              height: 150,
-              border: "5px solid #f2f5f8",
-            }}
-          />
-
-        </div>
-
-
-        {/* Information */}
-        <div className="flex-1">
-
-          <h1 className="text-[26px] font-bold text-[#101f45]">
-            {teacher.name}
-          </h1>
-
-          <p className="mt-1 text-[17px] text-[#526b91]">
-            {teacher.role}
-          </p>
-
-
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-function QuoteCard() {
-  return (
-    <div className="h-full rounded-xl border border-[#e8edf4] bg-white p-3 shadow-[0_3px_15px_rgba(31,73,125,0.04)]">
-
-      <div className="relative h-full overflow-hidden rounded-lg bg-gradient-to-br from-[#edf5ff] to-[#dfeaff] p-7">
-
-        <p className="max-w-[310px] text-[16px] font-medium italic leading-6 text-[#1553a0]">
-          “Teaching is not just
-          <br />
-          about imparting knowledge,
-          <br />
-          it’s about inspiring change.”
-        </p>
-
-        <p className="mt-4 text-[14px] text-[#355b8d]">
-          — Ms. Priya Sharma
-        </p>
-
-        {/* Decorative books */}
-        <div className="absolute bottom-4 right-7 opacity-60">
-          <div className="flex items-end gap-1">
-
-            <div className="h-3 w-20 rounded-sm bg-[#6c92d9]" />
-            <div className="h-3 w-16 rounded-sm bg-[#4672c4]" />
-            <div className="h-3 w-20 rounded-sm bg-[#325cae]" />
-
-            <div className="ml-3 h-12 w-8 rounded-b-md border-b-4 border-[#7898d2] bg-[#dce8ff]" />
-
-          </div>
-        </div>
-
-      </div>
-    </div>
-  );
-}
-
-
-function ProfileTabs() {
-
-  return (
-    <div className="overflow-hidden rounded-xl border border-[#e8edf4] bg-white shadow-[0_3px_15px_rgba(31,73,125,0.04)]">
-
-      
-      <div className="p-7">
-            <div className="grid gap-7 md:grid-cols-2">
-
-              <InfoRow
-                icon={FiUser}
-                label="Full Name"
-                value={teacher.name}
-              />
-
-              <InfoRow
-                icon={FiCalendar}
-                label="Date of Birth"
-                value={teacher.dob}
-              />
-
-              <InfoRow
-                icon={FiUser}
-                label="Gender"
-                value={teacher.gender}
-              />
-
-              <InfoRow
-                icon={FiPhone}
-                label="Phone Number"
-                value={teacher.phone}
-              />
-
-              <InfoRow
-                icon={FiMail}
-                label="Email Address"
-                value={teacher.email}
-              />
-
-              <InfoRow
-                icon={FiMapPin}
-                label="Address"
-                value={teacher.address}
-              />
-
-            </div>
-    
-
-
-        
-          <div className="grid gap-6 md:grid-cols-2">
-            <InfoRow
-              icon={FiBookOpen}
-              label="Highest Qualification"
-              value="M.Sc Mathematics"
-            />
-
-            <InfoRow
-              icon={FiBook}
-              label="Specialization"
-              value="Advanced Mathematics"
-            />
-
-            <InfoRow
-              icon={FiCalendar}
-              label="Graduation Year"
-              value="2015"
-            />
-
-            <InfoRow
-              icon={HiOutlineAcademicCap}
-              label="Certification"
-              value="B.Ed"
-            />
-          </div>
-        
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <InfoRow
-              icon={FiClock}
-              label="Experience"
-              value="5+ Years"
-            />
-
-            <InfoRow
-              icon={FiUsers}
-              label="Classes Assigned"
-              value="9th, 10th, 11th, 12th"
-            />
-
-            <InfoRow
-              icon={FiCalendar}
-              label="Working Since"
-              value="July 2020"
-            />
-
-            <InfoRow
-              icon={FiBarChart2}
-              label="Total Students"
-              value="180"
-            />
-          </div>
-
-      </div>
-    </div>
-  );
-}
-
-
-function SubjectsCard() {
-  return (
-    <div className="rounded-xl border border-[#e8edf4] bg-white p-5 shadow-[0_3px_15px_rgba(31,73,125,0.04)]">
-
-      <div className="flex items-center justify-between">
-
-        <div className="flex items-center gap-3">
-          <FiBookOpen className="text-[23px] text-[#1769ff]" />
-
-          <h2 className="text-[16px] font-semibold text-[#13264b]">
-            Subjects
-          </h2>
-        </div>
-
-        <button className="text-[13px] font-medium text-[#1264e8] hover:underline">
-          View All
-        </button>
-
-      </div>
-
-
-      <div className="mt-5 flex flex-wrap gap-3">
-
-        {subjects.map((subject) => (
-          <span
-            key={subject.name}
-            className={`rounded-full px-4 py-2 text-[13px] font-medium ${subject.className}`}
-          >
-            {subject.name}
-          </span>
-        ))}
-
-      </div>
-    </div>
-  );
-}
-
-
-function ClassDetailsCard() {
-  return (
-    <div className="rounded-xl border border-[#e8edf4] bg-white p-5 shadow-[0_3px_15px_rgba(31,73,125,0.04)]">
-
-      <div className="flex items-center gap-3">
-
-        <FiUsers className="text-[23px] text-[#1769ff]" />
-
-        <h2 className="text-[16px] font-semibold text-[#13264b]">
-          Class Details
-        </h2>
-
-      </div>
-
-
-      <div className="mt-6 space-y-5">
-
-        <div className="flex justify-between gap-4">
-          <span className="text-[14px] text-[#7188a8]">
-            Classes Assigned
-          </span>
-
-          <span className="text-right text-[14px] font-medium text-[#13264b]">
-            {teacher.classes}
-          </span>
-        </div>
-
-
-        <div className="flex justify-between">
-          <span className="text-[14px] text-[#7188a8]">
-            Total Students
-          </span>
-
-          <span className="text-[14px] font-medium text-[#13264b]">
-            {teacher.students}
-          </span>
-        </div>
-
-
-        <div className="flex justify-between">
-          <span className="text-[14px] text-[#7188a8]">
-            Working Since
-          </span>
-
-          <span className="text-[14px] font-medium text-[#13264b]">
-            {teacher.workingSince}
-          </span>
-        </div>
-
-      </div>
-    </div>
-  );
-}
-
-
-function QuickActionsCard() {
-  return (
-    <div className="rounded-xl border border-[#e8edf4] bg-white p-5 shadow-[0_3px_15px_rgba(31,73,125,0.04)]">
-
-      <div className="flex items-center gap-3">
-
-        <FiZap className="text-[23px] text-[#1769ff]" />
-
-        <h2 className="text-[16px] font-semibold text-[#13264b]">
-          Quick Actions
-        </h2>
-
-      </div>
-
-
-      <div className="mt-5 grid grid-cols-3 gap-3">
-
-        <button className="flex min-h-[88px] flex-col items-center justify-center rounded-lg border border-[#e4eefb] bg-[#f5f9ff] px-2 transition hover:-translate-y-0.5">
-
-          <FiCalendar className="text-[23px] text-[#1769ff]" />
-
-          <span className="mt-3 text-center text-[11px] font-medium text-[#1255b7]">
-            View Attendance
-          </span>
-
-        </button>
-
-
-        <button className="flex min-h-[88px] flex-col items-center justify-center rounded-lg border border-[#e1f2e9] bg-[#f3fbf7] px-2 transition hover:-translate-y-0.5">
-
-          <FiUsers className="text-[23px] text-[#16a05d]" />
-
-          <span className="mt-3 text-center text-[11px] font-medium text-[#16824f]">
-            Manage Classes
-          </span>
-
-        </button>
-
-
-        <button className="flex min-h-[88px] flex-col items-center justify-center rounded-lg border border-[#eee5fc] bg-[#faf7ff] px-2 transition hover:-translate-y-0.5">
-
-          <HiOutlineChartBar className="text-[23px] text-[#7c3aed]" />
-
-          <span className="mt-3 text-center text-[11px] font-medium text-[#7134c8]">
-            View Reports
-          </span>
-
-        </button>
-
-      </div>
-    </div>
-  );
-}
-
+const emptyProfile = Object.fromEntries(profileFields.map(({ name }) => [name, ""]));
+const profileSections = [
+  { title: "Personal information", fields: ["name", "dob", "gender", "phone", "email", "address", "location"] },
+  { title: "Professional information", fields: ["qualification", "specialization", "graduationYear", "certification", "experience", "workingSince"] },
+];
 
 export default function TeacherProfile() {
+  const navigate = useNavigate();
+  const [profile, setProfile] = useState(emptyProfile);
+  const [teacherId, setTeacherId] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [editOpen, setEditOpen] = useState(false);
+  const [form, setForm] = useState(emptyProfile);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    api.get("/teacher/session")
+      .then((response) => {
+        if (!active) return;
+        const teacher = response.data.teacher || {};
+        setProfile({ ...emptyProfile, ...teacher });
+        setTeacherId(teacher.id || "");
+      })
+      .catch((requestError) => {
+        if (active) setError(requestError.response?.data?.message || "Could not load your profile");
+      })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  const initials = useMemo(
+    () => (profile.name || "Teacher").trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join(""),
+    [profile.name]
+  );
+
+  const openEditor = () => {
+    setForm({ ...emptyProfile, ...profile });
+    setError("");
+    setEditOpen(true);
+  };
+
+  const handleSave = async (event) => {
+    event.preventDefault();
+    setError("");
+    setSaving(true);
+    try {
+      const response = await api.put("/teacher/profile", form);
+      const teacher = response.data.teacher || form;
+      setProfile({ ...emptyProfile, ...teacher });
+      setTeacherId(teacher.id || teacherId);
+      setEditOpen(false);
+      setMessage(response.data.message || "Profile updated successfully");
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "Could not update your profile");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const valueFor = (fieldName) => profile[fieldName]?.trim() || "Not added";
 
   return (
-    <div className="min-h-screen bg-[#f7faff] text-[#10254a]">
+    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        <header className="mb-5 flex items-center justify-between gap-3">
+          <Button onClick={() => navigate("/attendtrack/dashboard")} startIcon={<FiArrowLeft />} className="!normal-case !text-slate-600">Back to dashboard</Button>
+          <Button onClick={openEditor} variant="contained" startIcon={<FiEdit3 />} disabled={loading || !profile.name} className="!bg-blue-700 !normal-case hover:!bg-blue-800">Edit Profile</Button>
+        </header>
 
+        {error && !editOpen && <Alert severity="error" className="!mb-4">{error}</Alert>}
 
+        {loading ? (
+          <section className="flex min-h-80 items-center justify-center rounded-xl border border-slate-200 bg-white"><CircularProgress /></section>
+        ) : (
+          <>
+            <section className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:p-7">
+              <Avatar sx={{ width: 88, height: 88, bgcolor: "#dbeafe", color: "#1d4ed8", fontSize: 28, fontWeight: 700 }}>{initials}</Avatar>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Teacher profile</p>
+                <h1 className="mt-1 truncate text-2xl font-bold tracking-tight">{profile.name || "Teacher"}</h1>
+                <p className="mt-1 flex items-center gap-2 text-sm text-slate-500"><FiMail />{profile.email || "Email not added"}</p>
+              </div>
+              <div className="rounded-lg bg-slate-50 px-4 py-3 sm:min-w-40">
+                <p className="text-xs text-slate-500">Teacher ID</p>
+                <p className="mt-1 font-mono text-sm font-semibold text-slate-800">{teacherId || "—"}</p>
+              </div>
+            </section>
 
-      {/* Main */}
-      <main className="py-8 px-10">
+            <div className="mt-5 grid gap-5">
+              {profileSections.map((section) => (
+                <section key={section.title} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                  <h2 className="mb-5 text-base font-semibold">{section.title}</h2>
+                  <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
+                    {section.fields.map((fieldName) => {
+                      const field = profileFields.find((item) => item.name === fieldName);
+                      const Icon = fieldName === "email" ? FiMail : fieldName === "phone" ? FiPhone : fieldName === "address" || fieldName === "location" ? FiMapPin : FiUser;
+                      return (
+                        <div key={fieldName} className="flex min-w-0 gap-3">
+                          <span className="mt-0.5 text-slate-400"><Icon /></span>
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-slate-500">{field.label}</p>
+                            <p className="mt-1 break-words text-sm font-medium text-slate-800">{valueFor(fieldName)}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
 
-        {/* Top action */}
-        <div className="mb-5 flex items-center justify-between">
+      <Dialog open={editOpen} onClose={() => { if (!saving) setEditOpen(false); }} fullWidth maxWidth="md">
+        <form onSubmit={handleSave}>
+          <DialogTitle>Edit teacher profile</DialogTitle>
+          <DialogContent>
+            <p className="mb-4 text-sm text-slate-500">Update your personal and professional details.</p>
+            {error && <Alert severity="error" className="!mb-4">{error}</Alert>}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {profileFields.map((field) => (
+                <TextField
+                  key={field.name}
+                  fullWidth
+                  label={field.label}
+                  type={field.type || "text"}
+                  required={field.required}
+                  multiline={field.multiline}
+                  minRows={field.multiline ? 2 : undefined}
+                  value={form[field.name] || ""}
+                  onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))}
+                  slotProps={field.type === "date" ? { inputLabel: { shrink: true } } : undefined}
+                  inputProps={field.type === "number" ? { min: 1900, max: new Date().getFullYear() + 10 } : undefined}
+                />
+              ))}
+            </div>
+          </DialogContent>
+          <DialogActions className="!px-6 !pb-5">
+            <Button onClick={() => setEditOpen(false)} disabled={saving} className="!normal-case">Cancel</Button>
+            <Button type="submit" variant="contained" disabled={saving} className="!bg-blue-700 !normal-case">
+              {saving ? <><CircularProgress size={17} color="inherit" className="!mr-2" />Saving</> : "Save changes"}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
 
-          <button className="flex items-center gap-2 text-[14px] font-medium text-[#17365f] hover:text-[#1264e8]">
-            <FiArrowLeft className="text-[19px]" />
-            Back
-          </button>
-
-
-          <Button
-            variant="outlined"
-            startIcon={<FiEdit3 />}
-            sx={{
-              textTransform: "none",
-              borderRadius: "6px",
-              height: "40px",
-              px: 2.5,
-              borderColor: "#1769ff",
-              color: "#1769ff",
-              fontWeight: 500,
-              "&:hover": {
-                borderColor: "#1769ff",
-                backgroundColor: "#f1f6ff",
-              },
-            }}
-          >
-            Edit Profile
-          </Button>
-
-        </div>
-
-
-        {/* Hero */}
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_430px]">
-
-          <ProfileHero />
-
-          <QuoteCard />
-
-        </div>
-
-
-        {/* Content */}
-        <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_430px]">
-
-          {/* Left */}
-          <ProfileTabs />
-
-
-          {/* Right */}
-          <div className="space-y-5">
-
-            <SubjectsCard />
-
-            <ClassDetailsCard />
-
-            <QuickActionsCard />
-
-          </div>
-
-        </div>
-
-      </main>
-    </div>
+      <Snackbar open={Boolean(message)} autoHideDuration={3500} onClose={() => setMessage("")} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
+        <Alert severity="success" variant="filled" onClose={() => setMessage("")}>{message}</Alert>
+      </Snackbar>
+    </main>
   );
 }

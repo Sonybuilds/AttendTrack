@@ -36,22 +36,18 @@ export default function Login() {
     try {
       setMessage("Please wait...")
       const response = await api.post("/login", { id, password });
-      if (response) setMessage(false)
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setMessage(response.data.message);
-      setTimeout(() => {
-        navigate('/attendtrack/dashboard')
-      }, 1500);
+      const role = response.data.role;
+      setMessage(role === "student" ? "Checking student session..." : "Checking account session...");
+      const sessionResponse = await api.get(role === "student" ? "/student/session" : "/teacher/session");
+      if (!sessionResponse.data.authenticated) throw new Error("Account session could not be validated");
+      setMessage(response.data.message || "Login Successfully");
+      const destination = role === "student" ? "/attendtrack/student" : sessionResponse.data.teacher?.role === "admin" ? "/attendtrack/admin" : "/attendtrack/dashboard";
+      setTimeout(() => navigate(destination, { replace: true }), 700);
 
     } catch (error) {
-      if (error) setMessage(false);
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      if (error.message === "Network Error") {
-        setAlert("Unable to connect to the server.")
-      }
-      else {
-        setAlert(error.response.data.message)
-      }
+      setMessage("");
+      if (error.message === "Network Error") setAlert("Unable to connect to the server.");
+      else setAlert(error.response?.data?.message || error.message || "Login or session validation failed.");
       setTimeout(() => {
         setAlert(false);
       }, 1500);
@@ -89,12 +85,13 @@ export default function Login() {
             <div className="w-70 md:w-90 text-center text-lg">
               Sign in to take attendance, manage students, and view attendance reports
             </div>
+            <p className="max-w-sm text-center text-sm text-slate-500">Students sign in with the roll number and portal password provided by their teacher.</p>
           </div>
 
           <form onSubmit={LoginHandle} className="w-3/4 lg:w-1/2 mt-15 !space-y-20">
             <div className="!space-y-8">
               <TextField
-                placeholder="Teacher ID"
+                placeholder="Student Roll No, Teacher or Admin ID"
                 variant="outlined"
                 className="!w-full !text-black"
                 onChange={(e) => setId(e.target.value.toUpperCase())}
